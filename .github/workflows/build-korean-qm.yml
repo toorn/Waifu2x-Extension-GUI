@@ -1,23 +1,31 @@
-name: Build Korean Qt translation (QM)
+name: Build Korean Qt translations
 on:
   push:
     paths:
       - 'SRC_v3.41.01-beta/Waifu2x-Extension-QT/language_Korean.ts'
       - '.github/workflows/build-korean-qm.yml'
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   compile:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Qt Linguist tools
+      - name: Install Qt Linguist
         run: sudo apt-get update && sudo apt-get install -y qttools5-dev-tools
-      - name: Compile Korean QM
+      - name: Build Korean QM and English-slot test QM
+        shell: bash
         run: |
-          lrelease SRC_v3.41.01-beta/Waifu2x-Extension-QT/language_Korean.ts -qm language_Korean.qm
-          file language_Korean.qm
-      - name: Upload Korean QM
+          set -euo pipefail
+          TS="SRC_v3.41.01-beta/Waifu2x-Extension-QT/language_Korean.ts"
+          mkdir -p dist
+          lrelease "$TS" -qm dist/language_Korean.qm
+          cp dist/language_Korean.qm dist/language_English.qm
+          file dist/*.qm
+      - name: Upload compiled translations
         uses: actions/upload-artifact@v4
         with:
-          name: language_Korean-qm
-          path: language_Korean.qm
+          name: Korean-QM-preview-v3.41-source
+          path: dist/*.qm
+          if-no-files-found: error
