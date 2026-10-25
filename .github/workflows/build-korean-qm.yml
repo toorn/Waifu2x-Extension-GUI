@@ -1,4 +1,4 @@
-name: Build Korean Qt translations
+name: Build Korean Qt translation files
 on:
   push:
     paths:
@@ -6,26 +6,37 @@ on:
       - '.github/workflows/build-korean-qm.yml'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   compile:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Qt Linguist
+        with:
+          persist-credentials: true
+      - name: Install Qt Linguist tools
         run: sudo apt-get update && sudo apt-get install -y qttools5-dev-tools
-      - name: Build Korean QM and English-slot test QM
+      - name: Compile QM files
         shell: bash
         run: |
           set -euo pipefail
-          TS="SRC_v3.41.01-beta/Waifu2x-Extension-QT/language_Korean.ts"
-          mkdir -p dist
-          lrelease "$TS" -qm dist/language_Korean.qm
-          cp dist/language_Korean.qm dist/language_English.qm
-          file dist/*.qm
-      - name: Upload compiled translations
+          mkdir -p docs/ko/qm-preview
+          lrelease SRC_v3.41.01-beta/Waifu2x-Extension-QT/language_Korean.ts -qm docs/ko/qm-preview/language_Korean.qm
+          cp docs/ko/qm-preview/language_Korean.qm docs/ko/qm-preview/language_English.qm
+          file docs/ko/qm-preview/*.qm
+      - name: Upload files as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Korean-QM-preview-v3.41-source
-          path: dist/*.qm
+          name: Korean-QM-preview
+          path: docs/ko/qm-preview/*.qm
           if-no-files-found: error
+      - name: Publish compiled QM in repository
+        if: github.event_name != 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/ko/qm-preview/*.qm
+          if ! git diff --cached --quiet; then
+            git commit -m "i18n(ko): compile Korean Qt QM preview"
+            git push
+          fi
